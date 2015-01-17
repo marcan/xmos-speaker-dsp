@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Network xmlns="http://www.xmos.com"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.xmos.com http://www.xmos.com">
+	<Type>Board</Type>
+	<Name>USB 2.0 MC + DSP</Name>
+
+	<Declarations>
+		<Declaration>core stdcore[3]</Declaration>
+	</Declarations>
+
+	<Packages>
+		<Package id="0" Type="XS1-L2A-QF124">
+			<Nodes>
+				<Node Id="USB" InPackageId="0" Type="XS1-L1A" oscillator="13Mhz" systemfrequency="500Mhz" referencefrequency="100MHz">
+					<Core Number="0" Reference="stdcore[0]">
+						<Port Location="XS1_PORT_1A" Name="PORT_SPI_MISO"/>
+						<Port Location="XS1_PORT_1B" Name="PORT_SPI_SS"/>
+						<Port Location="XS1_PORT_1C" Name="PORT_SPI_CLK"/>
+						<Port Location="XS1_PORT_1D" Name="PORT_SPI_MOSI"/>
+
+						<Port Name="UIFM_INT_CLK_PORT" Location="XS1_PORT_1I"/>
+						<Port Name="UIFM_USB_CLK_PORT" Location="XS1_PORT_1H"/>
+						<Port Name="UIFM_REG_WRITE_PORT" Location="XS1_PORT_8C"/>
+						<Port Name="UIFM_REG_READ_PORT"  Location="XS1_PORT_8D"/>
+						<Port Name="UIFM_FLAG_0_PORT"    Location="XS1_PORT_1N"/>
+						<Port Name="UIFM_FLAG_1_PORT"    Location="XS1_PORT_1O"/>
+						<Port Name="UIFM_FLAG_2_PORT"    Location="XS1_PORT_1P"/>
+						<Port Name="UIFM_TX_DATA_PORT"   Location="XS1_PORT_8A"/>
+						<Port Name="UIFM_RX_DATA_PORT"   Location="XS1_PORT_8B"/>
+						<Port Name="UIFM_STP_SUS_PORT"   Location="XS1_PORT_1E"/>
+						<Port Name="UIFM_LS_PORT"        Location="XS1_PORT_4D"/>
+					</Core>
+					<Boot>
+						<Source Location="SPI:bootFlash"/>
+						<Bootee NodeId="AUD"/>
+						<!--<Bootee NodeId="DSP"/>-->
+					</Boot>
+				</Node>
+				<Node Id="AUD" InPackageId="1" Type="XS1-L1A" oscillator="13Mhz" systemfrequency="500MHz" referencefrequency="100MHz">
+					<Core Number="0" Reference="stdcore[1]">
+						<Port Location="XS1_PORT_8B" Name="PORT_LEDS"/>
+					</Core>
+					<Boot>
+						<Source Location="XMOSLINK"/>
+					</Boot>
+				</Node>
+			</Nodes>
+			</Package>
+		<Package id="1" Type="XS1-L1A-TQ128">
+			<Nodes>
+				<Node Id="DSP" InPackageId="0" Type="XS1-L1A" Oscillator="20MHz" SystemFrequency="500MHz" ReferenceFrequency="100MHz">
+					<Boot>
+						<Source Location="SPI:DSP_bootFlash"/>
+						<!--<Source Location="XMOSLINK"/>-->
+					</Boot>
+					<Core Number="0" Reference="stdcore[2]">
+						<Port Location="XS1_PORT_1M" Name="DSP_SPI_MISO"/>
+						<Port Location="XS1_PORT_1N" Name="DSP_SPI_SS"/>
+						<Port Location="XS1_PORT_1O" Name="DSP_SPI_CLK"/>
+						<Port Location="XS1_PORT_1P" Name="DSP_SPI_MOSI"/>
+					</Core>
+				</Node>
+			</Nodes>
+		</Package>
+	</Packages>
+	<Links>
+		<Link Encoding="5wire" Delays="0,1">
+			<LinkEndpoint NodeId="USB" Link="4"/>
+			<LinkEndpoint NodeId="AUD" Link="7"/>
+		</Link>
+		<Link Encoding="5wire" Delays="0,1">
+			<LinkEndpoint NodeId="USB" Link="5"/>
+			<LinkEndpoint NodeId="AUD" Link="6"/>
+		</Link>
+		<Link Encoding="5wire" Delays="0,1">
+			<LinkEndpoint NodeId="USB" Link="6"/>
+			<LinkEndpoint NodeId="AUD" Link="5"/>
+		</Link>
+		<Link Encoding="5wire" Delays="0,1">
+			<LinkEndpoint NodeId="USB" Link="7"/>
+			<LinkEndpoint NodeId="AUD" Link="4"/>
+		</Link>
+		<Link Encoding="2wire" Delays="4,4">
+			<LinkEndpoint NodeId="USB" Link="X0LA"/>
+			<LinkEndpoint NodeId="DSP" Link="X0LD"/>
+		</Link>
+		<!--
+		<Link Encoding="2wire" Delays="4,4" Flags="SOD">
+			<LinkEndpoint NodeId="DSP" Link="X0LC"/>
+			<LinkEndpoint RoutingId="0x8000" Chanend="1"/>
+		</Link>-->
+	</Links>
+
+	<ExternalDevices>
+		<Device NodeId="USB" Core="0" Class="SPIFlash" Name="bootFlash" Type="AT25DF041A">
+			<Attribute Name="PORT_SPI_MISO" Value="PORT_SPI_MISO"/>
+			<Attribute Name="PORT_SPI_SS"   Value="PORT_SPI_SS"/>
+			<Attribute Name="PORT_SPI_CLK"  Value="PORT_SPI_CLK"/>
+			<Attribute Name="PORT_SPI_MOSI" Value="PORT_SPI_MOSI"/>
+		</Device>
+	</ExternalDevices>
+
+	<ExternalDevices>
+		<Device NodeId="DSP" Core="0" Class="SPIFlash" Name="DSP_bootFlash" Type="AT25FS010">
+			<Attribute Name="PORT_SPI_MISO" Value="DSP_SPI_MISO"/>
+			<Attribute Name="PORT_SPI_SS"   Value="DSP_SPI_SS"/>
+			<Attribute Name="PORT_SPI_CLK"  Value="DSP_SPI_CLK"/>
+			<Attribute Name="PORT_SPI_MOSI" Value="DSP_SPI_MOSI"/>
+		</Device>
+	</ExternalDevices>
+
+	<JTAGChain>
+		<JTAGDevice NodeId="DSP"/>
+		<JTAGDevice NodeId="USB"/>
+		<JTAGDevice NodeId="AUD"/>
+	</JTAGChain>
+
+</Network>

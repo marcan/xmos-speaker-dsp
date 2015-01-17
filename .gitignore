@@ -1,0 +1,4 @@
+*.o
+*.bin
+tt
+auto_descriptors.h

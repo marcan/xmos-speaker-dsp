@@ -1,0 +1,33 @@
+This is my own firmware for the XMOS USB 2.0 Multichannel Reference Design
+board, which I use to drive my 5.1 speakers (Logitech Z-680 with the crappy
+original DSP frontend box removed). It is based on the original reference
+firmware by XMOS, but with a lot of horribleness removed (and a lot left -
+here be dragons, and don't blame me for it).
+
+I had to ask to get a copy of the original reference firmware, but it was
+provided to me with the EULA file that is in this repo, which I interpret to
+mean that the whole thing is licensed under the permissive BSD-like license
+which it contains, and therefore I am allowed to redistribute it.
+
+You need the aforementioned XMOS USB 2.0 MC Reference board, and also an XK-1A
+(or modified XK-1 to fix the xlink pinout) plugged into the JTAG/XLink port.
+You'll either have to power the XK-1A externally or modify the main board to
+back-feed power to it. The XK-1 provides additional DSP power.
+
+This firmware implements a fairly flexible mixer (tested and designed to
+work well with the Linux ALSA sound drivers; no idea how other OSes will
+interpret the mixer controls available) plus a fully configurable 15 biquad DSP
+filters for each of the 6 output channels for equalization, all running at
+(hardcoded) 96kHz sample rate and 24 bit depth (with a 32-bit processing path).
+Notable features include the ability to use stereo inputs as soft-differential
+(subtraction in software), and also rotate the mapping between stereo inputs
+and the 5.1ch output (so that, for example, the left channel can be mapped to
+the front speakers and the right to the rear speakers, creating a 90° rotation).
+The first stereo output is a headphones output that carries a downmixed version
+of the final 5.1ch mix, while the next 3 are the 5.1ch outputs. There is
+built-in downmixing of the 5ch into the .1 subwoofer channel - no hardcoded
+crossover (by default it's full range), but you can trivially configure one
+with the biquad filters. The input LFE channel is mixed at +10dB relative to
+the other channels into the .1 output, per the Dolby Digital spec.
+
+I think USB audio capture is broken but I've been too lazy to debug it.
