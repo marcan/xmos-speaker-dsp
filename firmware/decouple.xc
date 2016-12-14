@@ -138,11 +138,6 @@ void led(chanend ?c_led)
 }
 */
 
-// shared global midi buffering variables
-unsigned g_midi_from_host_flag = 0;
-unsigned g_midi_to_host_flag = 0;
-int midi_to_host_usb_ep = 0;
-int midi_from_host_usb_ep = 0;
 int aud_from_host_usb_ep = 0;
 int aud_to_host_usb_ep = 0;
 int int_usb_ep = 0;
@@ -556,7 +551,7 @@ void check_for_interrupt(chanend ?c_clk_int) {
 
 #pragma unsafe arrays
 void decouple(chanend c_mix_out,
-			chanend ?c_midi, chanend ?c_clk_int, chanend ?c_led)
+			chanend ?c_clk_int, chanend ?c_led)
 {
 	unsigned sampFreq = DEFAULT_FREQ;
 	int aud_from_host_flag=0;
@@ -564,22 +559,6 @@ void decouple(chanend c_mix_out,
 	xc_ptr released_buffer;
 
 
-#ifdef MIDI
-	xc_ptr midi_from_host_rdptr;
-	xc_ptr midi_from_host_buffer;
-	xc_ptr midi_to_host_buffer_being_sent = array_to_xc_ptr(g_midi_to_host_buffer_A);
-	xc_ptr midi_to_host_buffer_being_collected = array_to_xc_ptr(g_midi_to_host_buffer_B);
-
-	int is_ack;
-	unsigned int datum;
-	int midi_data_remaining_to_device = 0;
-	int midi_data_collected_from_device = 0;
-	int midi_waiting_on_send_to_host = 0;
-	int midi_to_host_flag = 0;
-	int midi_from_host_flag = 0;
-
-
-#endif
 	int t = array_to_xc_ptr(outAudioBuff);
 	int aud_in_ready = 0;
 
@@ -614,22 +593,6 @@ void decouple(chanend c_mix_out,
 
 
 	set_interrupt_handler(handle_audio_request, 200, 1, c_mix_out, 0);
-
-#ifdef MIDI
-	//asm("ldaw %0, dp[g_midi_to_host_buffer]":"=r"(midi_to_host_buffer));
-	asm("ldaw %0, dp[g_midi_from_host_buffer]":"=r"(midi_from_host_buffer));
-
-	// wait for usb_buffer to set up
-	while(!midi_from_host_flag) {
-	GET_SHARED_GLOBAL(midi_from_host_flag, g_midi_from_host_flag);
-	}
-
-	midi_from_host_flag = 0;
-	SET_SHARED_GLOBAL(g_midi_from_host_flag, midi_from_host_flag);
-
-	// send the current host -> device buffer out of the fifo
-	XUD_SetReady(midi_from_host_usb_ep, 1);
-#endif
 
 #ifdef OUTPUT
 	// wait for usb_buffer to set up

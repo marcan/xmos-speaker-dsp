@@ -114,13 +114,11 @@ on stdcore[CORE_AUD] : out port p_gpio				  = XS1_PORT_4F;
 
 /* Endpoint type tables for XUD */
 XUD_EpType epTypeTableOut[NUM_EP_OUT] = { XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, 
-											XUD_EPTYPE_ISO,
-											XUD_EPTYPE_BUL};
+											XUD_EPTYPE_ISO};
 
 XUD_EpType epTypeTableIn[NUM_EP_IN] = { XUD_EPTYPE_CTL | XUD_STATUS_ENABLE,
 											XUD_EPTYPE_ISO,
 											XUD_EPTYPE_ISO,
-											XUD_EPTYPE_BUL,
 											XUD_EPTYPE_BUL};
 
 void InitMixers(chanend c_mix_ctl);
@@ -148,7 +146,6 @@ int main()
 #endif
 	streaming chan c_spdif_rx;
 	chan c_adat_rx;  // CT_END after each sample
-	chan c_midi;
 	chan c_clk_int;
 	chan c_dsp;
 	chan c_dsp_ctl;
@@ -186,7 +183,7 @@ int main()
 
 			printf("Hello, world from buffer!\n");
 			buffer(c_xud_out[1], c_xud_in[2], c_xud_in[1],
-				c_xud_out[2], c_xud_in[3], c_xud_in[4],
+				c_xud_in[3],
 				c_sof,  c_aud_ctl,
 				p_for_mclk_count);
 		}
@@ -195,7 +192,7 @@ int main()
 		{
 			unsigned int i;
 			printf("Hello, world from decouple!\n");
-			decouple(c_mix_out, c_midi, c_clk_int, c_led);
+			decouple(c_mix_out, c_clk_int, c_led);
 		}
 /*
 		on stdcore[1] :

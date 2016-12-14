@@ -64,17 +64,6 @@ unsigned g_freqChange = 0;
 /* Interrupt EP data */
 unsigned char g_intData[8];
 
-#ifdef MIDI
-static inline void swap(xc_ptr &a, xc_ptr &b)
-{
-xc_ptr tmp;
-tmp = a;
-a = b;
-b = tmp;
-return;
-}
-#endif
-
 unsigned char fb_clocks[16];
 
 //#define FB_TOLERANCE_TEST
@@ -90,8 +79,6 @@ extern unsigned g_numUsbChanIn;
 * @return  void
 */
 void buffer(register chanend c_aud_out, register chanend c_aud_in, chanend c_aud_fb,
-			chanend c_midi_from_host,
-			chanend c_midi_to_host,
 			chanend c_int, chanend c_sof,
 			chanend c_aud_ctl,
 			in port p_off_mclk
@@ -100,10 +87,6 @@ void buffer(register chanend c_aud_out, register chanend c_aud_in, chanend c_aud
 XUD_ep ep_aud_out = XUD_Init_Ep(c_aud_out);
 XUD_ep ep_aud_in = XUD_Init_Ep(c_aud_in);
 XUD_ep ep_aud_fb = XUD_Init_Ep(c_aud_fb);
-#ifdef MIDI
-XUD_ep ep_midi_from_host = XUD_Init_Ep(c_midi_from_host);
-XUD_ep ep_midi_to_host = XUD_Init_Ep(c_midi_to_host);
-#endif
 XUD_ep ep_int = XUD_Init_Ep(c_int);
 
 	unsigned datalength;
@@ -124,11 +107,6 @@ XUD_ep ep_int = XUD_Init_Ep(c_int);
 
 	xc_ptr aud_from_host_buffer = 0;
 
-#ifdef MIDI
-	xc_ptr midi_from_host_buffer = 0;
-	xc_ptr midi_to_host_buffer = 0;
-	xc_ptr midi_to_host_waiting_buffer = 0;
-#endif
 
 
 	set_thread_fast_mode_on();

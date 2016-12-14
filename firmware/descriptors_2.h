@@ -166,7 +166,7 @@ unsigned char cfgDesc_Audio2[] =
 	/* Standard AS Interrupt Endpoint Descriptor (4.8.2.1): */
 	0x07,                           /* 0  bLength: 7 */
 	0x05,                           /* 1  bDescriptorType: ENDPOINT */
-	0x84,                           /* 2  bEndpointAddress (D7: 0:out, 1:in) */
+	0x83,                           /* 2  bEndpointAddress (D7: 0:out, 1:in) */
 	3,                              /* 3  bmAttributes (bitmap)  */
 	6,0,                            /* 4  wMaxPacketSize */
 	8,                              /* 6  bInterval */
