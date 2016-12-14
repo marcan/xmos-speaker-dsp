@@ -40,6 +40,7 @@
 #include <print.h>
 #include "dsp.h"
 
+#define UPDATE_MIXER_AND_ACK 42
 
 extern unsigned int g_curSamFreq;
 extern unsigned int g_curSamFreq48000Family;
@@ -122,7 +123,6 @@ struct mixer_state {
 };
 
 static struct mixer_state mixer_state;
-static int mixer_dirty = 0;
 
 static int mix_mult[MAX_MIX_COUNT][MIX_INPUTS];
 static int in_mix_mult[2][3];
@@ -322,8 +322,7 @@ static int handle_volume(unsigned char buffer[], struct volume vol[], XUD_ep ep0
 				return 1;
 			XUD_GetBuffer(ep0_out, buffer);
 			vol[chidx].val = getShort(buffer);
-			mixer_dirty = 1;
-			return XUD_DoSetRequestStatus(ep0_in, 0);
+			return UPDATE_MIXER_AND_ACK;
 		} else if (request == GET_CUR) {
 			storeShort(buffer, 0, vol[chidx].val);
 			return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 2, sp.wLength);
@@ -336,8 +335,7 @@ static int handle_volume(unsigned char buffer[], struct volume vol[], XUD_ep ep0
 				return 1;
 			XUD_GetBuffer(ep0_out, buffer);
 			vol[chidx].mute = buffer[0] ? 1 : 0;
-			mixer_dirty = 1;
-			return XUD_DoSetRequestStatus(ep0_in, 0);
+			return UPDATE_MIXER_AND_ACK;
 		} else if (request == GET_CUR) {
 			buffer[0] = vol[chidx].mute ? 1 : 0;
 			buffer[1] = 0;
@@ -369,8 +367,7 @@ static int AuxMixerRequest(unsigned char buffer[], XUD_ep ep0_out, XUD_ep ep0_in
 				if (buffer[0] < 1 || buffer[0] > 4)
 					return 1;
 				mixer_state.aux[aux].rot = buffer[0] - 1;
-				mixer_dirty = 1;
-				return XUD_DoSetRequestStatus(ep0_in, 0);
+				return UPDATE_MIXER_AND_ACK;
 			} else if (request == GET_CUR) {
 				buffer[0] = mixer_state.aux[aux].rot + 1;
 				buffer[1] = 0;
@@ -385,8 +382,7 @@ static int AuxMixerRequest(unsigned char buffer[], XUD_ep ep0_out, XUD_ep ep0_in
 				if (buffer[0] < 1 || buffer[0] > 2)
 					return 1;
 				mixer_state.aux[aux].balanced = buffer[0] - 1;
-				mixer_dirty = 1;
-				return XUD_DoSetRequestStatus(ep0_in, 0);
+				return UPDATE_MIXER_AND_ACK;
 			} else if (request == GET_CUR) {
 				buffer[0] = mixer_state.aux[aux].balanced + 1;
 				buffer[1] = 0;
@@ -500,8 +496,7 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 				if (buffer[0] < 1 || buffer[0] > 4)
 					return 1;
 				mixer_state.cap_sel = buffer[0] - 1;
-				mixer_dirty = 1;
-				return XUD_DoSetRequestStatus(ep0_in, 0);
+				return UPDATE_MIXER_AND_ACK;
 			} else if (request == GET_CUR) {
 				buffer[0] = mixer_state.cap_sel + 1;
 				buffer[1] = 0;
@@ -515,10 +510,11 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 int AudioClassRequests_2(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, chanend c_audioControl, chanend ?c_mix_ctl, chanend ?c_clk_ctl)
 {
 	int ret;
-	mixer_dirty = 0;
 	ret = AudioClassRequests_2_Argh(ep0_out, ep0_in, sp, c_audioControl);
-	if (mixer_dirty)
+	if (ret == UPDATE_MIXER_AND_ACK) {
 		update_mixer(c_mix_ctl);
+		return XUD_DoSetRequestStatus(ep0_in, 0);
+	}
 	return ret;
 }
 
