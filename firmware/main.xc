@@ -160,7 +160,7 @@ int main()
 			xscope_register(0);
 			xscope_config_io(XSCOPE_IO_BASIC);
 #endif
-			printf("Hello, world from mgr!\n");
+			puts("Hello, world from mgr!");
 			XUD_Manager(c_xud_out, NUM_EP_OUT, c_xud_in, NUM_EP_IN,
 				c_sof, epTypeTableOut, epTypeTableIn, p_usb_rst, clk, 1, XUD_SPEED_HS, null);
 		}
@@ -168,7 +168,7 @@ int main()
 		/* Endpoint 0 */
 		on stdcore[0] :
 		{
-			printf("Hello, world from ep0!\n");
+			puts("Hello, world from ep0!");
 			InitMixers(c_mix_ctl);
 			Endpoint0( c_xud_out[0], c_xud_in[0], c_aud_ctl, c_mix_ctl, c_clk_ctl, c_dsp_ctl);
 		}
@@ -181,7 +181,7 @@ int main()
 			set_port_clock(p_for_mclk_count, clk_master_too);
 			start_clock(clk_master_too);
 
-			printf("Hello, world from buffer!\n");
+			puts("Hello, world from buffer!");
 			buffer(c_xud_out[1], c_xud_in[2], c_xud_in[1],
 				c_xud_in[3],
 				c_sof,  c_aud_ctl,
@@ -191,7 +191,7 @@ int main()
 		on stdcore[0] :
 		{
 			unsigned int i;
-			printf("Hello, world from decouple!\n");
+			puts("Hello, world from decouple!");
 			decouple(c_mix_out, c_clk_int, c_led);
 		}
 /*
@@ -208,31 +208,31 @@ int main()
 		/* Core 1 */
 		on stdcore[1] :
 		{
-			printf("Hello, world from mixer!\n");
+			puts("Hello, world from mixer!");
 			mixer(c_mix_out, c_dsp_out, c_mix_ctl);
 		}
 
 		/* Audio I/O (pars additional S/PDIF TX thread) */
 		on stdcore[1] :
 		{
-			printf("Hello, world from AudioIO!\n");
+			puts("Hello, world from AudioIO!");
 			audio(c_del_out, c_dig_rx, null) ;
 		}
 
 		on stdcore[1] :
 		{
-			printf("Hello, world from clockGen!\n");
+			puts("Hello, world from clockGen!");
 			clockGen(c_spdif_rx, c_adat_rx, p_pll_clk, c_dig_rx, c_clk_ctl, c_clk_int);
 		}
 
 		on stdcore[1] :
 		{
-			printf("Hello, world from DSP Router!\n");
+			puts("Hello, world from DSP Router!");
 			dsp_router(c_dsp_out, c_del_out, c_dsp, c_dsp_ctl);
 		}
 		on stdcore[2] :
 		{
-			printf("Hello, world from DSP!\n");
+			puts("Hello, world from DSP!");
 			dsp(c_dsp);
 		}
 	}
