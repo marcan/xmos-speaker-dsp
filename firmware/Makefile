@@ -1,5 +1,5 @@
 XCC := xcc
-XCFLAGS := -Wall -W -O2 audio.xn -Wno-switch-fallthrough -report
+XCFLAGS := -Wall -W -O2 audio.xn -Wno-switch-fallthrough -report -Wno-timing
 LD := xmap
 LDFLAGS :=
 
