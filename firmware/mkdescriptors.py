@@ -232,8 +232,9 @@ for aux in (1, 2, 3):
 	id += 1
 	mode_norm = MixerUnit("Stereo", id, [input], CHAN_STEREO)
 	mode_bal = MixerUnit("Balanced", id+1, [input], CHAN_STEREO)
-	id += 2
-	mode_sel = SelectorUnit("Aux %d Mode" % aux, id, [mode_norm, mode_bal], {"selector": RW})
+	mode_clfe = MixerUnit("CLFE", id+2, [input], CHAN_STEREO)
+	id += 3
+	mode_sel = SelectorUnit("Aux %d Mode" % aux, id, [mode_norm, mode_bal, mode_clfe], {"selector": RW})
 	id += 1
 	play_vol = FeatureUnit("Aux %d Master" % aux, id, mode_sel, vol_mute(FL,FR))
 	aux_hp.append(play_vol)
@@ -245,7 +246,7 @@ for aux in (1, 2, 3):
 	id += 1
 	upmix = UpDownMixUnit(None, id, play_vol, CHAN_6CH, modes=[CHAN_6CH])
 	id += 1
-	mix_vol = FeatureUnit("Aux %d" % aux, id, upmix, vol_mute(FL, FR, BL, BR, FC))
+	mix_vol = FeatureUnit("Aux %d" % aux, id, upmix, vol_mute(FL, FR, BL, BR, FC, LFE))
 	id += 1
 	rot_0 = MixerUnit("0", id, [mix_vol], CHAN_6CH)
 	rot_90 = MixerUnit("90", id+1, [mix_vol], CHAN_6CH)

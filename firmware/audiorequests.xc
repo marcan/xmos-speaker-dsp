@@ -107,6 +107,7 @@ struct volume {
 
 struct aux_state {
 	int balanced;
+	int clfe;
 	struct volume cap[2];
 	struct volume play[2];
 	struct volume mix[6];
@@ -138,6 +139,11 @@ static int in_mix_mult[2][3];
 
 #define FRAC 25
 
+#define SQRT2 0x016a09e6
+#define DBM10  0x00a1e89b
+#define DBM20  0x00333333
+#define DBP10  0x0653160e
+
 static unsigned int vol2mul(struct volume &vol)
 {
 	if (vol.mute || vol.val == 0x8000)
@@ -149,47 +155,81 @@ static unsigned int vol2mul(struct volume &vol)
 static void update_aux(int aux, struct aux_state &auxs, unsigned int hl, unsigned int hr, unsigned int spkr_mul[6], int cap_active)
 {
 	unsigned int left, right;
-	unsigned int fl, fr, cl, cr, rr, rl;
+	unsigned int fl, fr, flr, cl, cr, rr, rl, rlr, lfel, lfer, lfe_mul, cmix_sqrt2, lfemix_sqrt2;
 	int idx = NUM_USB_CHAN_OUT + 2 * aux;
 
 	left = vol2mul(auxs.play[0]);
 	right = vol2mul(auxs.play[1]);
 
-	fl = longMul(left, vol2mul(auxs.mix[FL]), FRAC);
-	fr = longMul(right, vol2mul(auxs.mix[FR]), FRAC);
-	cl = longMul(left, vol2mul(auxs.mix[C]), FRAC);
-	cr = longMul(right, vol2mul(auxs.mix[C]), FRAC);
-	rl = longMul(left, vol2mul(auxs.mix[RL]), FRAC);
-	rr = longMul(right, vol2mul(auxs.mix[RR]), FRAC);
+	if (auxs.clfe) {
+		fl = longMul(left, vol2mul(auxs.mix[FL]), FRAC);
+		flr = longMul(left, vol2mul(auxs.mix[FR]), FRAC);
+		fr = 0;
+		rl = longMul(left, vol2mul(auxs.mix[RL]), FRAC);
+		rlr = longMul(left, vol2mul(auxs.mix[RR]), FRAC);
+		rr = 0;
+
+		cl = longMul(left, vol2mul(auxs.mix[C]), FRAC);
+		cr = 0;
+
+		lfel = 0;
+		lfer = longMul(right, vol2mul(auxs.mix[LFE]), FRAC);
+	} else {
+		fl = longMul(left, vol2mul(auxs.mix[FL]), FRAC);
+		fr = longMul(right, vol2mul(auxs.mix[FR]), FRAC);
+		flr = 0;
+		rl = longMul(left, vol2mul(auxs.mix[RL]), FRAC);
+		rr = longMul(right, vol2mul(auxs.mix[RR]), FRAC);
+		rlr = 0;
+
+		cmix_sqrt2 = longMul(vol2mul(auxs.mix[C]), SQRT2, FRAC);
+		lfemix_sqrt2 = longMul(vol2mul(auxs.mix[LFE]), SQRT2, FRAC);
+		cl = longMul(left, cmix_sqrt2, FRAC);
+		cr = longMul(right, cmix_sqrt2, FRAC);
+		lfel = longMul(left, lfemix_sqrt2, FRAC);
+		lfer = longMul(right, lfemix_sqrt2, FRAC);
+	}
+
+	lfe_mul = longMul(spkr_mul[LFE], DBM10, FRAC);
 
 	mix_mult[C][idx + 0] = longMul(cl, spkr_mul[C], FRAC);
 	mix_mult[C][idx + 1] = longMul(cr, spkr_mul[C], FRAC);
+	mix_mult[LFE][idx + 0] = longMul(lfel, lfe_mul, FRAC);
+	mix_mult[LFE][idx + 1] = longMul(lfer, lfe_mul, FRAC);
 	mix_mult[HL][idx + 0] = longMul(left, hl, FRAC);
 	mix_mult[HR][idx + 1] = longMul(right, hr, FRAC);
 
 	switch (auxs.rot) {
 		case 0:
 			mix_mult[FL][idx + 0] = longMul(fl, spkr_mul[FL], FRAC);
+			mix_mult[FR][idx + 0] = longMul(flr, spkr_mul[FR], FRAC);
 			mix_mult[FR][idx + 1] = longMul(fr, spkr_mul[FR], FRAC);
 			mix_mult[RR][idx + 1] = longMul(rr, spkr_mul[RR], FRAC);
+			mix_mult[RR][idx + 0] = longMul(rlr, spkr_mul[RR], FRAC);
 			mix_mult[RL][idx + 0] = longMul(rl, spkr_mul[RL], FRAC);
 			break;
 		case 1:
 			mix_mult[FR][idx + 0] = longMul(fl, spkr_mul[FR], FRAC);
+			mix_mult[RR][idx + 0] = longMul(flr, spkr_mul[RR], FRAC);
 			mix_mult[RR][idx + 1] = longMul(fr, spkr_mul[RR], FRAC);
 			mix_mult[RL][idx + 1] = longMul(rr, spkr_mul[RL], FRAC);
+			mix_mult[RL][idx + 0] = longMul(rlr, spkr_mul[RL], FRAC);
 			mix_mult[FL][idx + 0] = longMul(rl, spkr_mul[FL], FRAC);
 			break;
 		case 2:
 			mix_mult[RR][idx + 0] = longMul(fl, spkr_mul[RR], FRAC);
+			mix_mult[RL][idx + 0] = longMul(flr, spkr_mul[RL], FRAC);
 			mix_mult[RL][idx + 1] = longMul(fr, spkr_mul[RL], FRAC);
 			mix_mult[FL][idx + 1] = longMul(rr, spkr_mul[FL], FRAC);
+			mix_mult[FL][idx + 0] = longMul(rlr, spkr_mul[FL], FRAC);
 			mix_mult[FR][idx + 0] = longMul(rl, spkr_mul[FR], FRAC);
 			break;
 		case 3:
 			mix_mult[RL][idx + 0] = longMul(fl, spkr_mul[RL], FRAC);
+			mix_mult[FL][idx + 0] = longMul(flr, spkr_mul[FL], FRAC);
 			mix_mult[FL][idx + 1] = longMul(fr, spkr_mul[FL], FRAC);
 			mix_mult[FR][idx + 1] = longMul(rr, spkr_mul[FR], FRAC);
+			mix_mult[FR][idx + 0] = longMul(rlr, spkr_mul[FR], FRAC);
 			mix_mult[RR][idx + 0] = longMul(rl, spkr_mul[RR], FRAC);
 			break;
 	}
@@ -199,11 +239,6 @@ static void update_aux(int aux, struct aux_state &auxs, unsigned int hl, unsigne
 		in_mix_mult[FR][aux] = vol2mul(auxs.cap[FR]);
 	}
 }
-
-#define SQRT2 0x016a09e6
-#define DBM10  0x00a1e89b
-#define DBM20  0x00333333
-#define DBP10  0x0653160e
 
 void update_mixer(chanend c_mix_ctl)
 {
@@ -379,12 +414,13 @@ static int AuxMixerRequest(unsigned char buffer[], XUD_ep ep0_out, XUD_ep ep0_in
 				if (sp.wLength > 2 || sp.wLength < 1)
 					return 1;
 				XUD_GetBuffer(ep0_out, buffer);
-				if (buffer[0] < 1 || buffer[0] > 2)
+				if (buffer[0] < 1 || buffer[0] > 3)
 					return 1;
-				mixer_state.aux[aux].balanced = buffer[0] - 1;
+				mixer_state.aux[aux].balanced = buffer[0] == 2;
+				mixer_state.aux[aux].clfe = buffer[0] == 3;
 				return UPDATE_MIXER_AND_ACK;
 			} else if (request == GET_CUR) {
-				buffer[0] = mixer_state.aux[aux].balanced + 1;
+				buffer[0] = mixer_state.aux[aux].balanced ? 2 : mixer_state.aux[aux].clfe ? 3 : 1;
 				buffer[1] = 0;
 				return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 2, sp.wLength);
 			}
