@@ -29,7 +29,7 @@ all: tt
 
 tt: $(OBJS)
 	@echo "  LINK      $@"
-	$(Q)$(XCC) $(XCFLAGS) -o $@ $^ $(LIBS)
+	$(Q)$(XCC) $(XCFLAGS) -o $@ $^ $(LIBS) -Wm,--map,map.txt
 
 %.o: %.xc *.h auto_descriptors.h Makefile audio.xn
 	@echo "  COMPILE   $@"
