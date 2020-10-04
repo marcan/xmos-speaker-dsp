@@ -13,7 +13,7 @@ static int dsp_out_samples[I2S_CHANS_DAC];
 static int in_samples[I2S_CHANS_ADC];
 
 static struct biquad lfe_biquads[DSP_FILTERS+1] = {
-		{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},
+		{0,0,DB10,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},
 		{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},
 		{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},
 		{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,0,0,0,0,0},

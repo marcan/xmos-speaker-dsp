@@ -16,6 +16,7 @@
 #define MAX_DELAY (DELAY_BUF - 1)
 
 #define ONE (1<<(FRACTIONALBITS))
+#define DB10 0x194c583a
 
 struct biquad {
 	int xn1, xn2;
