@@ -90,7 +90,7 @@ class AudioDescriptor(Descriptor):
 
 	def mk_controls(self, ctls):
 		v = 0
-		for c, t in ctls.items():
+		for c, t in list(ctls.items()):
 			idx = self.CONTROLS.index(c)
 			v |= t<<(idx*2)
 		return v
@@ -181,7 +181,7 @@ class MixerUnit(AudioDescriptor):
 		for i in self.sources:
 			data += struct.pack("<B", i.id)
 		data += struct.pack("<BIB", self.channels[0], self.channels[1], 0)
-		data += "\x00" * ((in_ch * self.channels[0] + 7) // 8)
+		data += b"\x00" * ((in_ch * self.channels[0] + 7) // 8)
 		data += struct.pack("<BB", self.mk_controls(self.controls), mkstring(self.name))
 		return AudioDescriptor.build(self, data)
 
@@ -272,37 +272,37 @@ usb_out = OutputTerminal("Capture", None, USB_STREAMING, cap_sel, clock)
 
 header = Header(0x200, HOME_THEATER, audio_descriptors)
 
-print "#define AC_TLEN 0x%04x" % header.total_len
-print "#define AC_DESCRIPTORS \\"
+print("#define AC_TLEN 0x%04x" % header.total_len)
+print("#define AC_DESCRIPTORS \\")
 for i in [header] + audio_descriptors:
 	if isinstance(i, AudioDescriptor) and i.name is not None:
-		print "\t/* %s: %s */ \\" % (i.__class__.__name__, i.name)
+		print("\t/* %s: %s */ \\" % (i.__class__.__name__, i.name))
 	else:
-		print "\t/* %s */ \\" % (i.__class__.__name__)
-	print "\t%s, \\" % ", ".join("0x%02x"%ord(c) for c in i.build())
-print
-print "#define AC_STRINGS \\"
+		print("\t/* %s */ \\" % (i.__class__.__name__))
+	print("\t%s, \\" % ", ".join("0x%02x"%c for c in i.build()))
+print()
+print("#define AC_STRINGS \\")
 for i, j in enumerate(strings):
-	print "\t/* %02x */ \"%s\", \\" % (i+string_offset, j)
-print
-print "#define ID_CLKSRC 0x%02x" % clock.id
-print "#define ID_USB_IN 0x%02x" % usb_in.id
-print "#define ID_PCM_VOL 0x%02x" % pcm_vol.id
+	print("\t/* %02x */ \"%s\", \\" % (i+string_offset, j))
+print()
+print("#define ID_CLKSRC 0x%02x" % clock.id)
+print("#define ID_USB_IN 0x%02x" % usb_in.id)
+print("#define ID_PCM_VOL 0x%02x" % pcm_vol.id)
 
-print "#define ID_HP_VOL 0x%02x" % hp_vol.id
-print "#define ID_HP_OUT 0x%02x" % hp_out.id
+print("#define ID_HP_VOL 0x%02x" % hp_vol.id)
+print("#define ID_HP_OUT 0x%02x" % hp_out.id)
 
-print "#define ID_SPKR_MASTER 0x%02x" % spkr_master.id
-print "#define ID_SPKR_VOL 0x%02x" % spkr_vol.id
-print "#define ID_SPKR_OUT 0x%02x" % spkr_out.id
+print("#define ID_SPKR_MASTER 0x%02x" % spkr_master.id)
+print("#define ID_SPKR_VOL 0x%02x" % spkr_vol.id)
+print("#define ID_SPKR_OUT 0x%02x" % spkr_out.id)
 
-print "#define ID_CAP_SEL 0x%02x" % cap_sel.id
-print "#define ID_USB_OUT 0x%02x" % usb_out.id
+print("#define ID_CAP_SEL 0x%02x" % cap_sel.id)
+print("#define ID_USB_OUT 0x%02x" % usb_out.id)
 
-print "#define ID_AUX_IT 0x%02x" % (input.id & 0x1f)
-print "#define ID_AUX_MODE_SEL 0x%02x" % (mode_sel.id & 0x1f)
-print "#define ID_AUX_CAP_VOL 0x%02x" % (cap_vol.id & 0x1f)
-print "#define ID_AUX_PLAY_VOL 0x%02x" % (play_vol.id & 0x1f)
-print "#define ID_AUX_MIX_VOL 0x%02x" % (mix_vol.id & 0x1f)
-print "#define ID_AUX_ROT_SEL 0x%02x" % (rot_sel.id & 0x1f)
+print("#define ID_AUX_IT 0x%02x" % (input.id & 0x1f))
+print("#define ID_AUX_MODE_SEL 0x%02x" % (mode_sel.id & 0x1f))
+print("#define ID_AUX_CAP_VOL 0x%02x" % (cap_vol.id & 0x1f))
+print("#define ID_AUX_PLAY_VOL 0x%02x" % (play_vol.id & 0x1f))
+print("#define ID_AUX_MIX_VOL 0x%02x" % (mix_vol.id & 0x1f))
+print("#define ID_AUX_ROT_SEL 0x%02x" % (rot_sel.id & 0x1f))
 
