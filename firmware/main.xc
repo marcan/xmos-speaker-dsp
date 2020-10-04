@@ -41,6 +41,9 @@
 #include "endpoint0.h"
 #include "usb_buffer.h"
 #include "decouple.h"
+#ifdef SPDIF_RX
+# include "SpdifReceive.h"
+#endif
 
 void audio(chanend c_mix_out, chanend?, chanend?);
 void clockGen (streaming chanend c_spdif_rx, chanend c_adat_rx, out port p, chanend, chanend, chanend);
@@ -75,7 +78,6 @@ void dsp_router(chanend, chanend, chanend, chanend);
 #define PORT_COD_CLK_MAS			XS1_PORT_1L
 
 on stdcore[CORE_USB] : buffered in port:4 p_spdif_rx	= XS1_PORT_1K; /* K: coax, J: optical */
-on stdcore[CORE_USB] : buffered in port:32 p_adat_rx	= XS1_PORT_1J; /* K: coax, J: optical */
 on stdcore[CORE_USB] : out port p_usb_rst			   = PORT_USB_RST;
 on stdcore[CORE_USB] : in port p_for_mclk_count		 = XS1_PORT_32A;
 on stdcore[CORE_USB] : in port p_mclk_too			   = XS1_PORT_1L;
@@ -91,7 +93,7 @@ on stdcore[CORE_AUD] : port p_mclk					  = PORT_COD_CLK_MAS;
 on stdcore[CORE_AUD] : out port p_aud_cfg			   = XS1_PORT_4A;
 on stdcore[CORE_AUD] : port p_i2c_scl				   = PORT_I2C_SCL;	 // 2-wire configuration interface.
 on stdcore[CORE_AUD] : port p_i2c_sda				   = PORT_I2C_SDA;
-on stdcore[CORE_AUD] : buffered out port:32 p_spdif_tx  = XS1_PORT_1K;	  // K: coax, J: optical
+on stdcore[CORE_AUD] : buffered out port:32 p_spdif_tx  = XS1_PORT_1J;	  // K: coax, J: optical
 on stdcore[CORE_AUD] : out port p_midi_tx			   = XS1_PORT_1O;
 on stdcore[CORE_AUD] : port p_midi_rx				   = XS1_PORT_1P;
 on stdcore[CORE_AUD] : buffered out port:32 p_i2s_dac[I2S_WIRES_DAC] = {PORT_COD_DAC_0, PORT_COD_DAC_1, PORT_COD_DAC_2, PORT_COD_DAC_3};
@@ -194,6 +196,14 @@ int main()
 			puts("Hello, world from decouple!");
 			decouple(c_mix_out, c_clk_int, c_led);
 		}
+#ifdef SPDIF_RX
+		on stdcore[0] :
+		{
+			puts("Hello, world from SpdifReceive!");
+			set_thread_fast_mode_on();
+			SpdifReceive(p_spdif_rx, c_spdif_rx, 2, clk_spd_rx);
+		}
+#endif
 /*
 		on stdcore[1] :
 		{

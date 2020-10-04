@@ -18,7 +18,7 @@ OBJS += endpoint0.o DescriptorRequests.o audiorequests.o audiostream.o
 OBJS += decouple.o audio.o clocking.o usb_buffer.o clockgen.o codec.o
 OBJS += mixer.o fastmix.o i2c.o codec.o pll.o audioports.o get_adc_counts.o
 OBJS += XUD_EpFunctions.o XUD_UIFM_Ports.o XUD_EpFuncs.o dbcalc.o dsp.o
-OBJS += dsp_router.o biquad.o
+OBJS += dsp_router.o biquad.o SpdifReceive.o
 
 LIBS := libxud.a
 

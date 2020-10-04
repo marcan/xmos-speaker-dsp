@@ -34,12 +34,12 @@
 
 static int mix_in_samples[MIX_INPUTS];
 static int mix_out_samples[MAX_MIX_COUNT];
-static int aux_in_samples[2][3];
+static int aux_in_samples[2][AUX_COUNT];
 static int usb_in_samples[NUM_USB_CHAN_IN];
 
 static int mix_mult[MAX_MIX_COUNT][MIX_INPUTS];
-static int in_mix_mult[2][3];
-static int aux_balanced[3];
+static int in_mix_mult[2][AUX_COUNT];
+static int aux_balanced[AUX_COUNT];
 
 static int input_map[NUM_USB_CHAN_OUT] = {
 	0, 1, 4, 5, 2, 3,
@@ -80,7 +80,7 @@ static void giveSamplesToDevice(chanend c)
 static void getSamplesFromDevice(chanend c)
 {
 #pragma loop unroll
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < IN_CHANNELS; i++)
 		STW(mix_in_samples, i + NUM_USB_CHAN_OUT, inuint(c));
 }
 
@@ -111,11 +111,11 @@ void mixer1(chanend c_host, chanend c_mix_ctl, chanend c_mixer2)
 							}
 						}
 						for (int i = 0; i < 2; i++) {
-							for (int j = 0; j < 3; j++) {
+							for (int j = 0; j < AUX_COUNT; j++) {
 								STW(in_mix_mult[i], j, inuint(c_mix_ctl));
 							}
 						}
-						for (int i = 0; i < 3; i++) {
+						for (int i = 0; i < AUX_COUNT; i++) {
 							STW(aux_balanced, i, inuint(c_mix_ctl));
 						}
 						inct(c_mix_ctl);
@@ -152,9 +152,8 @@ void mixer1(chanend c_host, chanend c_mix_ctl, chanend c_mixer2)
 		mixed = doMix_out(mix_in_samples, mix_mult[6]);
 		STW(mix_out_samples, 6, mixed);
 #endif
-		aux_in_samples[0][0] = mix_in_samples[6];
-		aux_in_samples[0][1] = mix_in_samples[8];
-		aux_in_samples[0][2] = mix_in_samples[10];
+		for (int i = 0; i < AUX_COUNT; i++)
+			STW(aux_in_samples[0], i, mix_in_samples[6 + i * 2]);
 		mixed = doMix_in(aux_in_samples[0], in_mix_mult[0]);
 		STW(usb_in_samples, 0, mixed);
 	}
@@ -174,7 +173,7 @@ void mixer2(chanend c_mixer1, chanend c_audio)
 		outuint(c_mixer1, 0);
 		getSamplesFromDevice(c_audio);
 #pragma loop unroll
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < AUX_COUNT; i++) {
 			int off = i*2 + NUM_USB_CHAN_OUT;
 			if (aux_balanced[i]) {
 				int p = mix_in_samples[off] >> 1;
@@ -203,9 +202,8 @@ void mixer2(chanend c_mixer1, chanend c_audio)
 		mixed = doMix_out(mix_in_samples, mix_mult[7]);
 		STW(mix_out_samples, 7, mixed);
 #endif
-		aux_in_samples[1][0] = mix_in_samples[7];
-		aux_in_samples[1][1] = mix_in_samples[9];
-		aux_in_samples[1][2] = mix_in_samples[11];
+		for (int i = 0; i < AUX_COUNT; i++)
+			STW(aux_in_samples[1], i, mix_in_samples[7 + i * 2]);
 		mixed = doMix_in(aux_in_samples[1], in_mix_mult[1]);
 		STW(usb_in_samples, 1, mixed);
 	}
@@ -227,10 +225,12 @@ void mixer(chanend c_mix_in, chanend c_mix_out, chanend c_mix_ctl)
 		}
 	}
 	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 3; j++) {
+		for (int j = 0; j < AUX_COUNT; j++) {
 			in_mix_mult[i][j] = 0;
 		}
 	}
+	for (int i = 0; i < AUX_COUNT; i++)
+		aux_balanced[i] = 0;
 	par {
 		mixer1(c_mix_in, c_mix_ctl, c);
 		mixer2(c, c_mix_out);

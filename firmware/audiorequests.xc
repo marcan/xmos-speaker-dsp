@@ -115,7 +115,7 @@ struct aux_state {
 };
 
 struct mixer_state {
-	struct aux_state aux[3];
+	struct aux_state aux[AUX_COUNT];
 	struct volume pcm[1];
 	struct volume hp[2];
 	struct volume spkr[6];
@@ -126,7 +126,7 @@ struct mixer_state {
 static struct mixer_state mixer_state;
 
 static int mix_mult[MAX_MIX_COUNT][MIX_INPUTS];
-static int in_mix_mult[2][3];
+static int in_mix_mult[2][AUX_COUNT];
 
 #define FL 0
 #define FR 1
@@ -249,7 +249,7 @@ void update_mixer(chanend c_mix_ctl)
 		for (int j = 0; j < MIX_INPUTS; j++)
 			mix_mult[i][j] = 0;
 	for (int i = 0; i < 2; i++)
-		for (int j = 0; j < 3; j++)
+		for (int j = 0; j < AUX_COUNT; j++)
 			in_mix_mult[i][j] = 0;
 
 	// Compute speaker channel volume
@@ -282,7 +282,7 @@ void update_mixer(chanend c_mix_ctl)
 	mix_mult[HR][LFE] = longMul(pcm_hr_sqrt2, DBP10, FRAC);
 
 	// Mix in aux inputs
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < AUX_COUNT; i++) {
 		int cap_active = 0;
 		if (mixer_state.cap_sel == i || mixer_state.cap_sel == 3)
 			cap_active = 1;
@@ -325,11 +325,11 @@ void update_mixer(chanend c_mix_ctl)
 		}
 	}
 	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 3; j++) {
+		for (int j = 0; j < AUX_COUNT; j++) {
 			outuint(c_mix_ctl, in_mix_mult[i][j]);
 		}
 	}
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < AUX_COUNT; i++) {
 		outuint(c_mix_ctl, mixer_state.aux[i].balanced);
 	}
 	outct(c_mix_ctl, XS1_CT_END);
@@ -384,7 +384,7 @@ static int AuxMixerRequest(unsigned char buffer[], XUD_ep ep0_out, XUD_ep ep0_in
 {
 	int aux = (unit >> 5) - 1;
 
-	if (aux < 0 || aux > 2)
+	if (aux < 0 || aux > (AUX_COUNT - 1))
 		return 1;
 
 	switch (unit & 0x1f) {
@@ -429,10 +429,10 @@ static int AuxMixerRequest(unsigned char buffer[], XUD_ep ep0_out, XUD_ep ep0_in
 	return 1;
 }
 
-int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, chanend c_audioControl)
+int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, chanend c_audioControl, chanend ?c_clk_ctl)
 {
 	int control = sp.wValue >> 8;
-	unsigned char buffer[1024];
+	unsigned char buffer[512];
 	int unit = sp.wIndex >> 8;
 	enum request request;
 
@@ -458,7 +458,7 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 		return AuxMixerRequest(buffer, ep0_out, ep0_in, sp, request, unit);
 
 	switch (unit) {
-		case ID_CLKSRC:
+		case ID_CLKSRC_INT:
 			if (control == CS_SAM_FREQ_CONTROL) {
 				if (request == SET_CUR) {
 					int tmp;
@@ -498,7 +498,7 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 
 					return XUD_DoSetRequestStatus(ep0_in, 0);
 				} else if (request == GET_CUR) {
-					storeInt(buffer, 0, 96000);
+					storeInt(buffer, 0, g_curSamFreq);
 					return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 4, sp.wLength);
 				} else if (request == GET_RANGE) {
 					storeShort(buffer, 0, 1);
@@ -509,11 +509,70 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 				}
 			} else if (control == CS_CLOCK_VALID_CONTROL) {
 				if (request == GET_CUR) {
-					// Always valid
-					buffer[0] = 1;
 					buffer[1] = 0;
+					buffer[0] = 1;
 					return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 2, sp.wLength);
 				}
+			}
+			break;
+		case ID_CLKSRC_SPDIF:
+			if (control == CS_SAM_FREQ_CONTROL) {
+				if (request == GET_CUR) {
+					storeInt(buffer, 0, 0);
+					if (!isnull(c_clk_ctl)) 
+					{
+						outuint(c_clk_ctl, GET_FREQ);
+						outuint(c_clk_ctl, CLOCK_SPDIF_INDEX);
+						outct(c_clk_ctl, XS1_CT_END);
+						
+						storeInt(buffer, 0, inuint(c_clk_ctl));
+						chkct(c_clk_ctl, XS1_CT_END);
+					}
+					return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 4, sp.wLength);
+				}
+			} else if (control == CS_CLOCK_VALID_CONTROL) {
+				if (request == GET_CUR) {
+					buffer[1] = 0;
+					buffer[0] = 0;
+					/* Interogate clockgen thread for validity */
+					if (!isnull(c_clk_ctl)) 
+					{
+						outuint(c_clk_ctl, GET_VALID);
+						outuint(c_clk_ctl, CLOCK_SPDIF_INDEX);
+						outct(c_clk_ctl, XS1_CT_END);
+						buffer[0] = inuint(c_clk_ctl);
+						chkct(c_clk_ctl, XS1_CT_END);
+					}
+					return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 2, sp.wLength);
+				}
+			}
+			break;
+		case ID_CLKSEL:  
+			if (control == CX_CLOCK_SELECTOR_CONTROL) {
+				if (request == SET_CUR) {
+					if (sp.wLength > 2 || sp.wLength < 1)
+						return 1;
+					XUD_GetBuffer(ep0_out, buffer);
+					if (!isnull(c_clk_ctl)) 
+					{
+						outuint(c_clk_ctl, SET_SEL);
+						outuint(c_clk_ctl, buffer[0]);
+						outct(c_clk_ctl, XS1_CT_END);
+					}
+					return XUD_DoSetRequestStatus(ep0_in, 0);
+				} else if (request == GET_CUR) {
+					buffer[0] = 1;
+					buffer[1] = 0;
+					if (!isnull(c_clk_ctl)) { 
+						outuint(c_clk_ctl, GET_SEL);
+						outct(c_clk_ctl, XS1_CT_END);
+						buffer[0] = inuint(c_clk_ctl); 
+						chkct(c_clk_ctl, XS1_CT_END);
+					}
+					return XUD_DoGetRequest(ep0_out, ep0_in, buffer, 2, sp.wLength);
+				}
+			} else {
+				return 1;
 			}
 			break;
 		case ID_PCM_VOL:
@@ -546,7 +605,7 @@ int AudioClassRequests_2_Argh(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, ch
 int AudioClassRequests_2(XUD_ep ep0_out, XUD_ep ep0_in, SetupPacket &sp, chanend c_audioControl, chanend ?c_mix_ctl, chanend ?c_clk_ctl)
 {
 	int ret;
-	ret = AudioClassRequests_2_Argh(ep0_out, ep0_in, sp, c_audioControl);
+	ret = AudioClassRequests_2_Argh(ep0_out, ep0_in, sp, c_audioControl, c_clk_ctl);
 	if (ret == UPDATE_MIXER_AND_ACK) {
 		update_mixer(c_mix_ctl);
 		return XUD_DoSetRequestStatus(ep0_in, 0);
@@ -602,7 +661,7 @@ void InitMixers(chanend c_mix_ctl) {
 	int i,j;
 	mixer_state.spkr_master[0].val = -20 << 8;
 	//mixer_state.spkr[5].val = -22 << 8;
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < AUX_COUNT; i++) {
 		for (j = 0; j < 2; j++) {
 			mixer_state.aux[i].play[j].mute = 1;
 			mixer_state.aux[i].mix[j + 4].mute = 1;

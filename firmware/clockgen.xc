@@ -24,9 +24,11 @@
 
 #include "devicedefines.h"
 #include "clockcmds.h"
+#include "auto_descriptors.h"
 
 
 #ifdef SPDIF_RX
+#include "SpdifReceive.h"
 #pragma xta command "analyse path digital_out digital_out"
 #pragma xta command "set required - 5200 ns"             /* 192kHz */
 #endif
@@ -278,12 +280,13 @@ void clockGen (streaming chanend c_spdif_rx, chanend c_adat_rx, out port p, chan
     clockFreq[CLOCK_SPDIF_INDEX] = 0;
     clockValid[CLOCK_SPDIF_INDEX] = 0;
     clockInt[CLOCK_SPDIF_INDEX] = 0;
-    clockId[CLOCK_SPDIF_INDEX] = ID_CLKSRC_EXT;
+    clockId[CLOCK_SPDIF_INDEX] = ID_CLKSRC_SPDIF;
 #endif
     clockFreq[CLOCK_INTERNAL_INDEX] = 0;
     clockId[CLOCK_INTERNAL_INDEX] = 0;
     clockValid[CLOCK_INTERNAL_INDEX] = 0;
     clockInt[CLOCK_INTERNAL_INDEX] = 0;
+    clockId[CLOCK_INTERNAL_INDEX] = ID_CLKSRC_INT;
 #ifdef ADAT_RX
     clockFreq[CLOCK_ADAT_INDEX] = 0;
     clockInt[CLOCK_ADAT_INDEX] = 0;

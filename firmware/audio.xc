@@ -85,9 +85,9 @@ unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_d
 #if I2S_CHANS_DAC > 0
 	int samplesOut[I2S_CHANS_DAC];
 #endif
-#if I2S_CHANS_ADC > 0
-	int samplesIn[I2S_CHANS_ADC];
-	int samplesInPrev[I2S_CHANS_ADC];
+#if IN_CHANNELS > 0
+	int samplesIn[IN_CHANNELS];
+	int samplesInPrev[IN_CHANNELS];
 #endif
 	unsigned tmp;
 	unsigned index;
@@ -96,8 +96,8 @@ unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_d
 	int started = 0;
 #endif
 
-#if I2S_CHANS_ADC > 0
-	for (int i = 0; i < I2S_CHANS_ADC; i++)
+#if IN_CHANNELS > 0
+	for (int i = 0; i < IN_CHANNELS; i++)
 	{
 		samplesIn[i] = 0;
 		samplesInPrev[i] = 0;
@@ -122,7 +122,7 @@ unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_d
 		}
 
 #pragma loop unroll
-		for(int i = 0; i < I2S_CHANS_ADC; i++)
+		for(int i = 0; i < IN_CHANNELS; i++)
 		{
 			outuint(c_out, samplesIn[i]);
 		}
@@ -254,7 +254,7 @@ unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_d
 			}
 
 #pragma loop unroll
-			for(int i = 0; i < I2S_CHANS_ADC; i++)
+			for(int i = 0; i < IN_CHANNELS; i++)
 			{
 				outuint(c_out, samplesIn[i]);
 			}
@@ -466,7 +466,7 @@ static unsigned dummy_deliver(chanend c_out) {
 #ifndef MIXER // Interfaces straight to decouple()
 			(void) inuint(c_out);
 #pragma loop unroll
-			for(int i = 0; i < I2S_CHANS_ADC; i++)
+			for(int i = 0; i < IN_CHANNELS; i++)
 			{
 				outuint(c_out, 0);
 			}
@@ -484,7 +484,7 @@ static unsigned dummy_deliver(chanend c_out) {
 			}
 
 #pragma loop unroll
-			for(int i = 0; i < I2S_CHANS_ADC; i++)
+			for(int i = 0; i < IN_CHANNELS; i++)
 			{
 				outuint(c_out, 0);
 			}

@@ -52,7 +52,14 @@
 #define IN_VOLUME_AFTER_MIX 0
 
 #define MAX_MIX_COUNT 8
-#define MIX_INPUTS 12
+
+/* Define to enable S/PDIF Rx.  Note, this also effects glock gen thread and clock unit descriptors */
+#if defined(SPDIF_RX) && (SPDIF_RX==0)
+#undef SPDIF_RX
+#else
+// Enabled by default
+#define SPDIF_RX           1
+#endif
 
 #define SELF_POWERED 1
 
@@ -77,7 +84,6 @@
 
 /* Number of I2S chans from ADC */
 #define I2S_CHANS_ADC               (6)
-
 
 /* Master clock defines (in Hz) */
 #define MCLK_441                 (256*44100)      /* 44.1, 88.2 etc */
@@ -118,5 +124,19 @@
 
 //#define MAX_MIX_OUTPUTS             0
 
+
+#ifdef SPDIF_RX
+# define SPDIF_RX_INDEX 6
+# define SPDIF_CHANS 2
+# define SPDIF_CLOCKS 1
+#else
+# define SPDIF_CHANS 0
+# define SPDIF_CLOCKS 0
+#endif
+
+#define MIX_INPUTS (NUM_USB_CHAN_OUT + I2S_CHANS_ADC + SPDIF_CHANS)
+#define IN_CHANNELS (I2S_CHANS_ADC + SPDIF_CHANS)
+#define AUX_COUNT (IN_CHANNELS / 2)
+#define NUM_CLOCKS (1 + SPDIF_CLOCKS)
 
 #endif

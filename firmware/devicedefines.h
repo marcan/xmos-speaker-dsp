@@ -168,7 +168,6 @@
 #define NUM_EP_OUT               2               /* Max number of device endpoints used */
 #define NUM_EP_IN                4
 /* Length of clock unit/clock-selector units */
-#define NUM_CLOCKS                  1
 
 
 /* Total number of USB interfaces this device implements (+1 for required control interface) */

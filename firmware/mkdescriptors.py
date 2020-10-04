@@ -31,9 +31,11 @@ RW = 0x03
 
 USB_STREAMING = 0x0101
 LINE_CONNECTOR = 0x0603
+SPDIF_INTERFACE = 0x0605
 
 UP_DOWNMIX_PROCESS = 0x01
 
+CLOCK_EXTERNAL = 0x00
 CLOCK_INT_FIXED = 0x01
 
 HOME_THEATER = 0x02
@@ -201,6 +203,19 @@ class SelectorUnit(AudioDescriptor):
 		data += struct.pack("<BB", self.mk_controls(self.controls), mkstring(self.name))
 		return AudioDescriptor.build(self, data)
 
+class ClockSelector(AudioDescriptor):
+	CONTROLS = "selector".split()
+	def __init__(self, name, id, sources, controls = {}):
+		self.name, self.sources, self.controls = name, sources, controls
+		AudioDescriptor.__init__(self, CLOCK_SELECTOR, id)
+
+	def build(self):
+		data = struct.pack("<B", len(self.sources))
+		for i in self.sources:
+			data += struct.pack("<B", i.id)
+		data += struct.pack("<BB", self.mk_controls(self.controls), mkstring(self.name))
+		return AudioDescriptor.build(self, data)
+
 class Header(Descriptor):
 	def __init__(self, adc, category, children):
 		self.adc, self.category, self.children = adc, category, children
@@ -217,8 +232,11 @@ def vol_mute(*channels):
 def vol(*channels):
 	return dict((i,{"volume": RW}) for i in channels)
 
-clock = ClockSource(None, None, CLOCK_INT_FIXED, {"frequency": RW, "validity": RO})
-usb_in = InputTerminal("PCM", None, USB_STREAMING, clock, CHAN_6CH)
+clock = ClockSource("Internal", None, CLOCK_INT_FIXED, {"frequency": RW, "validity": RO})
+spdif_clock = ClockSource("S/PDIF", None, CLOCK_EXTERNAL, {"frequency": RO, "validity": RO})
+clock_sel = ClockSelector("Clock source", None, [clock, spdif_clock], {"selector": RW})
+
+usb_in = InputTerminal("PCM", None, USB_STREAMING, clock_sel, CHAN_6CH)
 pcm_vol = FeatureUnit("PCM", None, usb_in, vol_mute(MASTER))
 hp_downmix = UpDownMixUnit(None, None, pcm_vol, CHAN_STEREO, modes=[CHAN_STEREO])
 
@@ -226,34 +244,41 @@ aux_cap = []
 aux_hp = []
 aux_play = []
 
-for aux in (1, 2, 3):
+for aux in (1, 2, 3, 4):
+	if aux <= 3:
+		name = "Aux %d" % aux
+	else:
+		name = "S/PDIF"
 	id = aux << 5
-	input = InputTerminal("Aux %d" % aux, id, LINE_CONNECTOR, clock)
+	if aux <= 3:
+		input = InputTerminal(name, id, LINE_CONNECTOR, clock_sel)
+	else:
+		input = InputTerminal(name, id, SPDIF_INTERFACE, spdif_clock)
 	id += 1
 	mode_norm = MixerUnit("Stereo", id, [input], CHAN_STEREO)
 	mode_bal = MixerUnit("Balanced", id+1, [input], CHAN_STEREO)
 	mode_clfe = MixerUnit("CLFE", id+2, [input], CHAN_STEREO)
 	id += 3
-	mode_sel = SelectorUnit("Aux %d Mode" % aux, id, [mode_norm, mode_bal, mode_clfe], {"selector": RW})
+	mode_sel = SelectorUnit("%s Mode" % name, id, [mode_norm, mode_bal, mode_clfe], {"selector": RW})
 	id += 1
-	play_vol = FeatureUnit("Aux %d Master" % aux, id, mode_sel, vol_mute(FL,FR))
+	play_vol = FeatureUnit("%s Master" % name, id, mode_sel, vol_mute(FL,FR))
 	aux_hp.append(play_vol)
 	id += 1
-	cap_vol = FeatureUnit("Aux %d Capture" % aux, id, mode_sel, vol(FL,FR))
+	cap_vol = FeatureUnit("%s Capture" % name, id, mode_sel, vol(FL,FR))
 	id += 1
-	cap_mix = MixerUnit("Aux %d Capture" % aux, id, [cap_vol], CHAN_STEREO)
+	cap_mix = MixerUnit("%s Capture" % name, id, [cap_vol], CHAN_STEREO)
 	aux_cap.append(cap_mix)
 	id += 1
 	upmix = UpDownMixUnit(None, id, play_vol, CHAN_6CH, modes=[CHAN_6CH])
 	id += 1
-	mix_vol = FeatureUnit("Aux %d" % aux, id, upmix, vol_mute(FL, FR, BL, BR, FC, LFE))
+	mix_vol = FeatureUnit(name, id, upmix, vol_mute(FL, FR, BL, BR, FC, LFE))
 	id += 1
 	rot_0 = MixerUnit("0", id, [mix_vol], CHAN_6CH)
 	rot_90 = MixerUnit("90", id+1, [mix_vol], CHAN_6CH)
 	rot_180 = MixerUnit("180", id+2, [mix_vol], CHAN_6CH)
 	rot_270 = MixerUnit("270", id+3, [mix_vol], CHAN_6CH)
 	id += 4
-	rot_sel = SelectorUnit("Aux %d Rotation" % aux, id, [rot_0, rot_90, rot_180, rot_270], {"selector": RW})
+	rot_sel = SelectorUnit("%s Rotation" % name, id, [rot_0, rot_90, rot_180, rot_270], {"selector": RW})
 	id += 1
 	aux_play.append(rot_sel)
 
@@ -262,14 +287,14 @@ spkr_master = FeatureUnit("Master", None, spkr_mix, vol_mute(MASTER))
 
 hp_mix = MixerUnit(None, None, [hp_downmix] + aux_hp, CHAN_STEREO)
 hp_vol = FeatureUnit("Headphones", None, hp_mix, vol_mute(FL,FR))
-hp_out = OutputTerminal("Headphones", None, LINE_CONNECTOR, hp_vol, clock)
+hp_out = OutputTerminal("Headphones", None, LINE_CONNECTOR, hp_vol, clock_sel)
 
 spkr_vol = FeatureUnit("Speakers", None, spkr_master, vol_mute(FL,FR,BL,BR,FC,LFE))
-spkr_out = OutputTerminal("Speakers", None, LINE_CONNECTOR, spkr_vol, clock)
+spkr_out = OutputTerminal("Speakers", None, LINE_CONNECTOR, spkr_vol, clock_sel)
 
 cap_mix = MixerUnit("Mix", None, aux_cap, CHAN_STEREO)
 cap_sel = SelectorUnit("Capture Source", None, aux_cap + [cap_mix], {"selector": RW})
-usb_out = OutputTerminal("Capture", None, USB_STREAMING, cap_sel, clock)
+usb_out = OutputTerminal("Capture", None, USB_STREAMING, cap_sel, clock_sel)
 
 header = Header(0x200, HOME_THEATER, audio_descriptors)
 
@@ -286,7 +311,9 @@ print("#define AC_STRINGS \\")
 for i, j in enumerate(strings):
 	print("\t/* %02x */ \"%s\", \\" % (i+string_offset, j))
 print()
-print("#define ID_CLKSRC 0x%02x" % clock.id)
+print("#define ID_CLKSRC_INT 0x%02x" % clock.id)
+print("#define ID_CLKSRC_SPDIF 0x%02x" % spdif_clock.id)
+print("#define ID_CLKSEL 0x%02x" % clock_sel.id)
 print("#define ID_USB_IN 0x%02x" % usb_in.id)
 print("#define ID_PCM_VOL 0x%02x" % pcm_vol.id)
 

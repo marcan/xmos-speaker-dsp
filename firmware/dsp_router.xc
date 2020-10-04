@@ -10,7 +10,7 @@
 
 static int dsp_in_samples[I2S_CHANS_DAC];
 static int dsp_out_samples[I2S_CHANS_DAC];
-static int in_samples[I2S_CHANS_ADC];
+static int in_samples[IN_CHANNELS];
 
 static struct biquad lfe_biquads[DSP_FILTERS+1] = {
 		{0,0,DB10,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},{0,0,ONE,0,0,0,0},
@@ -40,7 +40,7 @@ static void giveSamplesToDevice(chanend c)
 static void getSamplesFromDevice(chanend c)
 {
 #pragma loop unroll
-	for (int i = 0; i < I2S_CHANS_ADC; i++)
+	for (int i = 0; i < IN_CHANNELS; i++)
 		STW(in_samples, i, inuint(c));
 }
 
@@ -48,7 +48,7 @@ static void getSamplesFromDevice(chanend c)
 static void giveSamplesToMixer(chanend c)
 {
 #pragma loop unroll
-	for (int i = 0; i < I2S_CHANS_ADC; i++)
+	for (int i = 0; i < IN_CHANNELS; i++)
 		outuint(c, in_samples[i]);
 }
 

@@ -18,6 +18,8 @@
  *
  **/                                   
 
+#include "devicedefines.h"
+
 #define DOMIX_TOP(i) \
 .cc_top doMix##i.function,doMix##i; \
           .align    4 ;\
@@ -76,13 +78,13 @@ doMix##i##: ;\
 
 
 
-#define N 12
+#define N MIX_INPUTS
 DOMIX_TOP(_out)
 #include "repeat.h" 
 DOMIX_BOT(_out)
 
 #undef N
-#define N 3
+#define N AUX_COUNT
 DOMIX_TOP(_in)
 #include "repeat.h"
 DOMIX_BOT(_in)
