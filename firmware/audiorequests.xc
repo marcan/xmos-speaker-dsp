@@ -602,8 +602,11 @@ void InitMixers(chanend c_mix_ctl) {
 	int i,j;
 	mixer_state.spkr_master[0].val = -20 << 8;
 	//mixer_state.spkr[5].val = -22 << 8;
-	for (i = 0; i < 3; i++)
-		for (j = 0; j < 2; j++)
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 2; j++) {
 			mixer_state.aux[i].play[j].mute = 1;
+			mixer_state.aux[i].mix[j + 4].mute = 1;
+		}
+	}
 	update_mixer(c_mix_ctl);
 }
