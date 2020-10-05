@@ -77,11 +77,15 @@ extern clock    clk_mst_spd;
 
 extern void device_reboot(void);
 
+#define PEAK_DIV 48000 / 30
+
 /* I2S delivery thread */
 #pragma unsafe arrays
-unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_dig_rx)
+unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_dig_rx, chanend? c_peaks)
 {
 	unsigned sample;
+	unsigned div = 0;
+	int peak = 0;
 #if I2S_CHANS_DAC > 0
 	int samplesOut[I2S_CHANS_DAC];
 #endif
@@ -284,7 +288,23 @@ unsigned deliver(chanend c_out, chanend c_spd_out, unsigned divide, chanend ?c_d
 		outuint(c_dig_rx, 0);
 #endif
 
-
+#if (I2S_CHANS_DAC != 0) && (I2S_CHANS_DAC != 0)
+#pragma loop unroll
+		for(int i = 2; i < I2S_CHANS_DAC; i++)
+		{
+			if (samplesOut[i] > peak) {
+				peak = samplesOut[i];
+			}
+			if (samplesOut[i] < -peak) {
+				peak = -samplesOut[i];
+			}
+		}
+		if (!isnull(c_peaks) && ++div >= PEAK_DIV) {
+			outuint(c_peaks, peak);
+			peak = 0;
+			div = 0;
+		}
+#endif
 
 		tmp = 0;
 
@@ -494,7 +514,7 @@ static unsigned dummy_deliver(chanend c_out) {
 	return 0;
 }
 
-void audio(chanend c_mix_out, chanend ?c_dig_rx, chanend ?c_config)
+void audio(chanend c_mix_out, chanend ?c_dig_rx, chanend ?c_config, chanend ?c_peaks)
 {
 	chan c_spdif_out;
 	unsigned curSamFreq = DEFAULT_FREQ;
@@ -570,7 +590,7 @@ void audio(chanend c_mix_out, chanend ?c_dig_rx, chanend ?c_config)
 				outuint(c_spdif_out, mClk);
 #endif
 
-				curSamFreq = deliver(c_mix_out, c_spdif_out, divide, c_dig_rx);
+				curSamFreq = deliver(c_mix_out, c_spdif_out, divide, c_dig_rx, c_peaks);
 
 				// Currently no more audio will happen after this point
 				if (curSamFreq == AUDIO_STOP_FOR_DFU)

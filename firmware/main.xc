@@ -41,11 +41,11 @@
 #include "endpoint0.h"
 #include "usb_buffer.h"
 #include "decouple.h"
+#include "audio.h"
 #ifdef SPDIF_RX
 # include "SpdifReceive.h"
 #endif
 
-void audio(chanend c_mix_out, chanend?, chanend?);
 void clockGen (streaming chanend c_spdif_rx, chanend c_adat_rx, out port p, chanend, chanend, chanend);
 void mixer(chanend, chanend, chanend);
 void dsp(chanend);
@@ -151,6 +151,7 @@ int main()
 	chan c_clk_int;
 	chan c_dsp;
 	chan c_dsp_ctl;
+	chan c_peaks;
 
 	par
 	{
@@ -204,17 +205,54 @@ int main()
 			SpdifReceive(p_spdif_rx, c_spdif_rx, 2, clk_spd_rx);
 		}
 #endif
-/*
+
+#define FULL 0x40000000
+#define HALF 0x16a09e66
+
+#define IDLE_TIME 30 * 600
+
 		on stdcore[1] :
 		{
 			unsigned int i;
+			int active;
+			int tmr = IDLE_TIME;
+			puts("Hello, world from LED!");
 			while(1) {
-				
-				c_led :> i;
-				p_led <: i;
+				active = 1;
+				i = inuint(c_peaks);
+				if (i > (FULL>>0)) {
+					p_led <: 0xff;
+				} else if (i > (HALF>>0)) {
+					p_led <: 0x7f;
+				} else if (i > (FULL>>3)) {
+					p_led <: 0x3f;
+				} else if (i > (HALF>>3)) {
+					p_led <: 0x1f;
+				} else if (i > (FULL>>6)) {
+					p_led <: 0x0f;
+				} else if (i > (HALF>>6)) {
+					p_led <: 0x07;
+				} else if (i > (FULL>>9)) {
+					p_led <: 0x03;
+				} else if (i > (HALF>>9)) {
+					p_led <: 0x01;
+				} else {
+					active = 0;
+				}
+				if (active) {
+					tmr = 0;
+					p_gpio <: 0x03;
+				} else if (tmr < IDLE_TIME) {
+					p_led <: 0x00;
+					p_gpio <: 0x03;
+					tmr++;
+				} else {
+					p_led <: 0x18;
+					p_gpio <: 0x0c;
+				}
 			}
 		}
-*/
+
 		/* Core 1 */
 		on stdcore[1] :
 		{
@@ -226,7 +264,7 @@ int main()
 		on stdcore[1] :
 		{
 			puts("Hello, world from AudioIO!");
-			audio(c_del_out, c_dig_rx, null) ;
+			audio(c_del_out, c_dig_rx, null, c_peaks) ;
 		}
 
 		on stdcore[1] :
@@ -249,3 +287,4 @@ int main()
 
 	return 0;
 }
+	
